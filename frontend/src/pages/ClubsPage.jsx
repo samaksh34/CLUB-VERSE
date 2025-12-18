@@ -1,23 +1,50 @@
-import React, { useState, useMemo } from 'react';
+
+import { useEffect, useState, useMemo } from "react";
+import { getClubs } from "../services/clubService";
+
 import Layout from '../components/layout/Layout';
 import ClubCard from '../components/clubs/ClubCard';
 import ClubFilters from '../components/clubs/ClubFilters';
 import Button from '../components/ui/Button';
-import { clubs, categories } from '../data/mockData';
+import { categories } from '../data/mockData';
 import { Search } from 'lucide-react';
 
 const ClubsPage = () => {
+    const [clubs, setClubs] = useState([]);
+    const [loading, setLoading] = useState(true);
+
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All');
 
     const filteredClubs = useMemo(() => {
         return clubs.filter(club => {
-            const matchesSearch = club.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                club.domain.toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesCategory = selectedCategory === 'All' || club.domain === selectedCategory;
+            const matchesSearch =
+                club.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                club.domain?.toLowerCase().includes(searchQuery.toLowerCase());
+
+            const matchesCategory =
+                selectedCategory === 'All' || club.domain === selectedCategory;
+
             return matchesSearch && matchesCategory;
         });
-    }, [searchQuery, selectedCategory]);
+    }, [clubs, searchQuery, selectedCategory]);
+
+
+    useEffect(() => {
+        const fetchClubs = async () => {
+            try {
+                const clubsArray = await getClubs();
+                console.log("CLUBS FROM SERVICE:", clubsArray);
+                setClubs(clubsArray);
+            } catch (error) {
+                console.error("Error fetching clubs:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchClubs();
+    }, []);
 
     return (
         <Layout>
@@ -35,7 +62,10 @@ const ClubsPage = () => {
                         categories={categories}
                     />
 
-                    {filteredClubs.length > 0 ? (
+                    {loading ? (
+                        <p className="text-center text-gray-400">Loading clubs...</p>
+                    ) : filteredClubs.length > 0 ? (
+
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-fade-in-up md:gap-y-10">
                             {filteredClubs.map(club => (
                                 <ClubCard key={club.id} club={club} />

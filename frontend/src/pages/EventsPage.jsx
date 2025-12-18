@@ -1,10 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../firebase/firebase";
+
 import Layout from '../components/layout/Layout';
 import EventCard from '../components/events/EventCard';
 import EventFilters from '../components/events/EventFilters';
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
-import { events, categories } from '../data/mockData';
+import { categories } from '../data/mockData';
 import { Calendar, MapPin, Clock, Users, X, Share2, ExternalLink } from 'lucide-react';
 
 const EventsPage = () => {
@@ -12,14 +15,40 @@ const EventsPage = () => {
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [selectedEvent, setSelectedEvent] = useState(null);
 
+    const [events, setEvents] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+
     const filteredEvents = useMemo(() => {
         return events.filter(event => {
             const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                event.club.toLowerCase().includes(searchQuery.toLowerCase());
+                (event.hostClub || "").toLowerCase().includes(searchQuery.toLowerCase());
             const matchesCategory = selectedCategory === 'All' || event.category === selectedCategory;
             return matchesSearch && matchesCategory;
         });
-    }, [searchQuery, selectedCategory]);
+    }, [events, searchQuery, selectedCategory]);
+
+    useEffect(() => {
+    const fetchEvents = async () => {
+        try {
+        const querySnapshot = await getDocs(collection(db, "events"));
+
+        const eventsArray = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+        }));
+
+        console.log("Events from Firebase:", eventsArray);
+        setEvents(eventsArray);
+        } catch (error) {
+        console.error("Error fetching events:", error);
+        } finally {
+        setLoading(false);
+        }
+    };
+
+    fetchEvents();
+    }, []);
 
     return (
         <Layout>
@@ -94,7 +123,7 @@ const EventsPage = () => {
                             <h2 className="text-3xl font-bold text-white mb-2">{selectedEvent.title}</h2>
                             <div className="flex items-center gap-2 text-gray-400 text-sm">
                                 <span>Hosted by</span>
-                                <span className="text-cyan-400 font-semibold">{selectedEvent.club}</span>
+                                <span className="text-cyan-400 font-semibold">{selectedEvent.hostClub}</span>
                             </div>
                         </div>
 
@@ -126,7 +155,7 @@ const EventsPage = () => {
                                 </div>
                                 <div>
                                     <div className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Venue</div>
-                                    <div className="font-medium text-white">{selectedEvent.location}</div>
+                                    <div className="font-medium text-white">{selectedEvent.venue}</div>
                                 </div>
                             </div>
 
@@ -136,7 +165,7 @@ const EventsPage = () => {
                                 </div>
                                 <div>
                                     <div className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Registered</div>
-                                    <div className="font-medium text-white">{selectedEvent.registeredCount} people</div>
+                                    <div className="font-medium text-white">{selectedEvent.regCount} people</div>
                                 </div>
                             </div>
                         </div>

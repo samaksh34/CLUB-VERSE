@@ -10,7 +10,7 @@ const ClubCard = ({ club }) => {
             <div className="h-24 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 relative">
                 <div className="absolute top-4 right-4">
                     <span className="px-3 py-1 text-xs font-bold text-cyan-400 bg-cyan-400/10 border border-cyan-400/20 rounded-full backdrop-blur-md">
-                        {club.domain}
+                        {club.category}
                     </span>
                 </div>
             </div>
@@ -32,7 +32,7 @@ const ClubCard = ({ club }) => {
                         {club.name}
                     </h3>
                     <p className="text-gray-400 text-sm leading-relaxed mb-4">
-                        {club.tagline}
+                        {club.description}
                     </p>
 
                     {/* Stats Grid */}
@@ -41,14 +41,14 @@ const ClubCard = ({ club }) => {
                             <Users className="w-4 h-4 text-blue-400" />
                             <div>
                                 <div className="text-xs text-gray-400 font-medium">Members</div>
-                                <div className="text-sm font-bold text-white">{club.members}</div>
+                                <div className="text-sm font-bold text-white">{club.membersCount}</div>
                             </div>
                         </div>
                         <div className="bg-white/5 rounded-lg p-2.5 flex items-center gap-2.5">
                             <Calendar className="w-4 h-4 text-purple-400" />
                             <div>
                                 <div className="text-xs text-gray-400 font-medium">Events</div>
-                                <div className="text-sm font-bold text-white">{club.eventsHosted}</div>
+                                <div className="text-sm font-bold text-white">{club.eventsCount}</div>
                             </div>
                         </div>
                     </div>

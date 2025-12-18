@@ -1,21 +1,91 @@
-import React, { useMemo, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "../firebase/firebase";
+import { getClubById } from "../services/clubService";
+
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
 import EventCard from '../components/events/EventCard';
 import Modal from '../components/ui/Modal';
-import { clubs, events } from '../data/mockData';
+
 import { Users, Calendar, Clock, CheckCircle, Mail, Instagram, User, ArrowLeft, MapPin } from 'lucide-react';
 
 const ClubDetailsPage = () => {
     const { id } = useParams();
     const [selectedEvent, setSelectedEvent] = useState(null);
 
-    const club = useMemo(() => clubs.find(c => c.id === parseInt(id)), [id]);
+    const [club, setClub] = useState(null);
+    const [clubEvents, setClubEvents] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const clubEvents = useMemo(() => {
-        return club ? events.filter(e => e.club === club.name) : [];
-    }, [club]);
+    useEffect(() => {
+        const fetchClubDetails = async () => {
+            console.log("Fetching club details for ID:", id);
+
+            if (!id) {
+                console.error("No ID provided for club details");
+                setLoading(false);
+                return;
+            }
+
+            try {
+                // Fetch club details using service
+                console.log("Calling getClubById...");
+                const clubData = await getClubById(id);
+                console.log("getClubById result:", clubData);
+
+                if (!clubData) {
+                    console.warn("Club data found is null/undefined");
+                    setClub(null);
+                    setLoading(false);
+                    return;
+                }
+
+                setClub(clubData);
+
+                // Fetch events of this club
+                // Note: If events collection doesn't default, we should handle it gracefully
+                if (clubData.name) {
+                    console.log("Fetching events for club name:", clubData.name);
+                    const eventsQuery = query(
+                        collection(db, "events"),
+                        where("hostClub", "==", clubData.name)
+                    );
+
+                    try {
+                        const eventsSnap = await getDocs(eventsQuery);
+                        const eventsArray = eventsSnap.docs.map(doc => ({
+                            id: doc.id,
+                            ...doc.data(),
+                        }));
+                        console.log("Events fetched:", eventsArray.length);
+                        setClubEvents(eventsArray);
+                    } catch (eventError) {
+                        console.error("Error fetching events (non-critical):", eventError);
+                        // Don't fail the whole page if events fail to load
+                        setClubEvents([]);
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching club details (critical):", error);
+            } finally {
+                console.log("fetchClubDetails finished, setting loading to false");
+                setLoading(false);
+            }
+        };
+        fetchClubDetails();
+    }, [id]);
+
+    if (loading) {
+        return (
+            <Layout>
+                <div className="min-h-screen flex items-center justify-center text-gray-400">
+                    Loading club details...
+                </div>
+            </Layout>
+        );
+    }
 
     if (!club) {
         return (
@@ -27,6 +97,7 @@ const ClubDetailsPage = () => {
         );
     }
 
+
     return (
         <Layout>
             <div className="bg-background min-h-screen pb-20">
@@ -35,7 +106,7 @@ const ClubDetailsPage = () => {
                 <div className="relative h-[400px] md:h-[500px]">
                     {/* Banner Image */}
                     <img
-                        src={club.banner}
+                        src={club.banner || "https://via.placeholder.com/1200x500?text=Club+Banner"}
                         alt={club.name}
                         className="w-full h-full object-cover"
                     />
@@ -46,7 +117,7 @@ const ClubDetailsPage = () => {
                             {/* Logo Overlay */}
                             <div className="w-32 h-32 md:w-40 md:h-40 rounded-3xl p-1 bg-[#040B1C] border border-white/20 shadow-2xl shrink-0 -mb-10 md:mb-0 relative z-20">
                                 <img
-                                    src={club.logo}
+                                    src={club.logo || "https://via.placeholder.com/300?text=Logo"}
                                     alt={club.name}
                                     className="w-full h-full object-cover rounded-2xl"
                                 />
@@ -65,7 +136,7 @@ const ClubDetailsPage = () => {
                                     )}
                                 </div>
                                 <h1 className="text-4xl md:text-6xl font-bold text-white mb-2">{club.name}</h1>
-                                <p className="text-xl text-gray-300 font-medium">{club.vision}</p>
+                                <p className="text-xl text-gray-300 font-medium">{club.description}</p>
                             </div>
 
                             {/* Actions */}
@@ -106,8 +177,8 @@ const ClubDetailsPage = () => {
                             <section>
                                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                                     <StatCard label="Founded" value={club.founded} icon={Calendar} color="text-purple-400" />
-                                    <StatCard label="Members" value={club.members} icon={Users} color="text-blue-400" />
-                                    <StatCard label="Events" value={club.eventsHosted} icon={Clock} color="text-pink-400" />
+                                    <StatCard label="Members" value={club.membersCount} icon={Users} color="text-blue-400" />
+                                    <StatCard label="Events" value={club.eventsCount} icon={Clock} color="text-pink-400" />
                                     <StatCard label="Status" value={club.active ? 'Active' : 'Inactive'} icon={CheckCircle} color="text-green-400" />
                                 </div>
                             </section>
